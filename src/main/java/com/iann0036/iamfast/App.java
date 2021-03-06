@@ -26,6 +26,10 @@ public class App {
         CompilationUnit compilationUnit = StaticJavaParser.parse(file);
 
         compilationUnit.findAll(VariableDeclarator.class).stream().forEach(
-                f -> System.out.println("Check var at line" + f.getRange().map(r -> r.begin.line).orElse(-1)));
+            f -> {
+                System.out.println(f.getNameAsString());
+                System.out.println(f.getTypeAsString());
+            }
+        );
     }
 }
