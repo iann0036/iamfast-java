@@ -24,9 +24,7 @@ public class App {
 
         File file = new File(args[0]);
 
-        System.out.println("Start");
-
-        ArrayList<Call> callLog = new ArrayList<Call>();
+        ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
 
         try {
             callLog = parseFile(file);
@@ -37,18 +35,16 @@ public class App {
         String policy = generatePolicy(callLog);
 
         System.out.println(policy);
-
-        System.out.println("Done");
     }
 
-    public static String generatePolicy(ArrayList<Call> callLog) {
+    public static String generatePolicy(ArrayList<AWSCall> callLog) {
         JSONObject policy = new JSONObject();
 
         JSONArray statements = new JSONArray();
 
-        Iterator<Call> callLogIter = callLog.iterator();
+        Iterator<AWSCall> callLogIter = callLog.iterator();
         while (callLogIter.hasNext()) {
-            Call call = callLogIter.next();
+            AWSCall call = callLogIter.next();
 
             JSONObject statement = new JSONObject();
             statement.put("Effect", "Allow");
@@ -61,11 +57,11 @@ public class App {
         policy.put("Version", "2012-10-17");
         policy.put("Statement", statements);
 
-        return policy.toString();
+        return policy.toString(4);
     }
 
-    public static ArrayList<Call> parseFile(File file) throws FileNotFoundException {
-        ArrayList<Call> callLog = new ArrayList<Call>();
+    public static ArrayList<AWSCall> parseFile(File file) throws FileNotFoundException {
+        ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
         ArrayList<String> imports = new ArrayList<String>();
         HashMap<String, String> clientMap = new HashMap<String, String>();
         HashMap<String, String> requestMap = new HashMap<String, String>();
@@ -116,7 +112,7 @@ public class App {
                         String method = node.getName().asString();
                         method = method.substring(0, 1).toUpperCase() + method.substring(1);
 
-                        callLog.add(new Call(service, method));
+                        callLog.add(new AWSCall(service, method));
                     }
                 }
             }

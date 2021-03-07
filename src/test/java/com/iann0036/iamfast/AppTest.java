@@ -6,19 +6,26 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 
-public class AppTest 
+public class AppTest
 {
     @Test
     public void s3CreateBucket()
     {
         File file = new File("./testFiles/s3CreateBucket.java");
 
+        ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
+
         try {
-            App.parseFile(file);
+            callLog = App.parseFile(file);
         } catch (FileNotFoundException e) {
             fail(e.getMessage());
         }
+
+        String policy = App.generatePolicy(callLog);
+
+        System.out.println(policy);
     }
 
     @Test
@@ -26,10 +33,16 @@ public class AppTest
     {
         File file = new File("./testFiles/ec2StartInstance.java");
 
+        ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
+
         try {
-            App.parseFile(file);
+            callLog = App.parseFile(file);
         } catch (FileNotFoundException e) {
             fail(e.getMessage());
         }
+
+        String policy = App.generatePolicy(callLog);
+
+        System.out.println(policy);
     }
 }
