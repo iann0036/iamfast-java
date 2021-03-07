@@ -8,4 +8,8 @@ public class AWSCall {
         service = serviceInput;
         method = methodInput;
     }
+
+    public String toString() {
+        return service + "." + method;
+    }
 }

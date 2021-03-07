@@ -13,36 +13,16 @@ public class AppTest
     @Test
     public void s3CreateBucket()
     {
-        File file = new File("./testFiles/s3CreateBucket.java");
-
-        ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
-
-        try {
-            callLog = App.parseFile(file);
-        } catch (FileNotFoundException e) {
-            fail(e.getMessage());
-        }
-
-        String policy = App.generatePolicy(callLog);
-
-        System.out.println(policy);
+        String filename = "./testFiles/s3CreateBucket.java";
+        System.out.println("FILE: " + filename);
+        App.processFile(filename);
     }
 
     @Test
     public void ec2StartInstance()
     {
-        File file = new File("./testFiles/ec2StartInstance.java");
-
-        ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
-
-        try {
-            callLog = App.parseFile(file);
-        } catch (FileNotFoundException e) {
-            fail(e.getMessage());
-        }
-
-        String policy = App.generatePolicy(callLog);
-
-        System.out.println(policy);
+        String filename = "./testFiles/ec2StartInstance.java";
+        System.out.println("FILE: " + filename);
+        App.processFile(filename);
     }
 }

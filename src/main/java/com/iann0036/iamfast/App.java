@@ -8,12 +8,18 @@ import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.stream.Collectors;
 
 public class App {
     public static void main(String[] args) {
@@ -22,37 +28,82 @@ public class App {
             return;
         }
 
-        File file = new File(args[0]);
+        processFile(args[0]);
+    }
+
+    public static void processFile(String filename) {
+        File file = new File(filename);
+
+        App app = new App();
 
         ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
 
         try {
-            callLog = parseFile(file);
+            callLog = app.parseFile(file);
         } catch (FileNotFoundException e) {
             System.out.println("Couldn't file the specified file");
         }
-
-        String policy = generatePolicy(callLog);
-
-        System.out.println(policy);
-    }
-
-    public static String generatePolicy(ArrayList<AWSCall> callLog) {
-        JSONObject policy = new JSONObject();
 
         JSONArray statements = new JSONArray();
 
         Iterator<AWSCall> callLogIter = callLog.iterator();
         while (callLogIter.hasNext()) {
             AWSCall call = callLogIter.next();
+            
+            JSONArray callStatements = app.callToPrivileges(call);
+            for (int i=0; i<callStatements.length(); i++) {
+                statements.put(callStatements.getJSONObject(i));
+            }
+        };
 
-            JSONObject statement = new JSONObject();
-            statement.put("Effect", "Allow");
-            statement.put("Action", call.service + ":" + call.method);
-            statement.put("Resource", "*");
+        String policy = app.generatePolicy(statements);
 
-            statements.put(statement);
+        System.out.println(policy);
+    }
+
+    public JSONArray callToPrivileges(AWSCall call) {
+        JSONArray statements = new JSONArray();
+
+        ClassLoader classLoader = getClass().getClassLoader();
+        InputStream inputStream = classLoader.getResourceAsStream("map.json");
+        JSONTokener tokener = new JSONTokener(inputStream);
+        JSONObject iamMap = new JSONObject(tokener);
+        
+        /*
+        InputStream inputStream2 = classLoader.getResourceAsStream("lib/parliament/iam_definition.json");
+        JSONTokener tokener2 = new JSONTokener(inputStream2);
+        JSONObject iamDef = new JSONObject(tokener2);
+        */
+
+        JSONObject iamMapMethods = iamMap.getJSONObject("sdk_method_iam_mappings");
+
+        Iterator<String> methodIter = iamMapMethods.keys();
+        while (methodIter.hasNext()) {
+            String k = methodIter.next();
+
+            if (k.toLowerCase() == call.toString().toLowerCase()) {
+                JSONArray methodsForCall = iamMapMethods.getJSONArray(k);
+                
+                for (int i=0; i<methodsForCall.length(); i++) {
+                    JSONObject methodForCall = methodsForCall.getJSONObject(i);
+
+                    String action = methodForCall.get("action").toString();
+
+                    JSONObject statement = new JSONObject();
+                    statement.put("Effect", "Allow");
+                    statement.put("Action", action);
+                    statement.put("Resource", "*");
+
+                    statements.put(statement);
+                }
+            }
         }
+
+        return statements;
+    }
+
+    public String generatePolicy(JSONArray statements) {
+        JSONObject policy = new JSONObject();
         
         policy.put("Version", "2012-10-17");
         policy.put("Statement", statements);
@@ -60,7 +111,7 @@ public class App {
         return policy.toString(4);
     }
 
-    public static ArrayList<AWSCall> parseFile(File file) throws FileNotFoundException {
+    public ArrayList<AWSCall> parseFile(File file) throws FileNotFoundException {
         ArrayList<AWSCall> callLog = new ArrayList<AWSCall>();
         ArrayList<String> imports = new ArrayList<String>();
         HashMap<String, String> clientMap = new HashMap<String, String>();
