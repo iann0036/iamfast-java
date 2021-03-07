@@ -5,6 +5,10 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -20,19 +24,53 @@ public class App {
 
         File file = new File(args[0]);
 
+        System.out.println("Start");
+
+        ArrayList<Call> callLog = new ArrayList<Call>();
+
         try {
-            parseFile(file);
+            callLog = parseFile(file);
         } catch (FileNotFoundException e) {
             System.out.println("Couldn't file the specified file");
         }
+
+        String policy = generatePolicy(callLog);
+
+        System.out.println(policy);
+
+        System.out.println("Done");
     }
 
-    public static void parseFile(File file) throws FileNotFoundException {
-        CompilationUnit compilationUnit = StaticJavaParser.parse(file);
+    public static String generatePolicy(ArrayList<Call> callLog) {
+        JSONObject policy = new JSONObject();
 
+        JSONArray statements = new JSONArray();
+
+        Iterator<Call> callLogIter = callLog.iterator();
+        while (callLogIter.hasNext()) {
+            Call call = callLogIter.next();
+
+            JSONObject statement = new JSONObject();
+            statement.put("Effect", "Allow");
+            statement.put("Action", call.service + ":" + call.method);
+            statement.put("Resource", "*");
+
+            statements.put(statement);
+        }
+        
+        policy.put("Version", "2012-10-17");
+        policy.put("Statement", statements);
+
+        return policy.toString();
+    }
+
+    public static ArrayList<Call> parseFile(File file) throws FileNotFoundException {
+        ArrayList<Call> callLog = new ArrayList<Call>();
         ArrayList<String> imports = new ArrayList<String>();
         HashMap<String, String> clientMap = new HashMap<String, String>();
         HashMap<String, String> requestMap = new HashMap<String, String>();
+
+        CompilationUnit compilationUnit = StaticJavaParser.parse(file);
 
         compilationUnit.findAll(ImportDeclaration.class).forEach(node -> {
             imports.add(node.getNameAsString());
@@ -56,14 +94,34 @@ public class App {
         });
 
         compilationUnit.findAll(MethodCallExpr.class).forEach(node -> {
+            /*
             System.out.println(node);
-
-            System.out.println(node.getScope());
+            System.out.println(node.getScope().isPresent());
             System.out.println(node.getName());
             System.out.println(node.getTypeArguments());
             System.out.println(node.getArguments());
 
             System.out.println("---");
+            */
+
+            if (node.getScope().isPresent()) {
+                String scope = node.getScope().get().toString();
+                if (clientMap.containsKey(scope)) {
+                    String clientType = clientMap.get(scope);
+                    String[] clientTypeSplit = clientType.split("\\.");
+
+                    if (clientTypeSplit.length >= 2) {
+                        String service = clientTypeSplit[clientTypeSplit.length - 2];
+
+                        String method = node.getName().asString();
+                        method = method.substring(0, 1).toUpperCase() + method.substring(1);
+
+                        callLog.add(new Call(service, method));
+                    }
+                }
+            }
         });
+
+        return callLog;
     }
 }
