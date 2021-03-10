@@ -81,7 +81,7 @@ public class App {
         while (methodIter.hasNext()) {
             String k = methodIter.next();
 
-            if (k.toLowerCase() == call.toString().toLowerCase()) {
+            if (k.toLowerCase().equals(call.toString().toLowerCase())) {
                 JSONArray methodsForCall = iamMapMethods.getJSONArray(k);
                 
                 for (int i=0; i<methodsForCall.length(); i++) {
